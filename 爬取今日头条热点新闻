@@ -1,0 +1,61 @@
+import requests
+import json
+import urllib2
+import re
+import math
+import time
+import hashlib
+def getas_cp():
+    zz ={}
+    now = round(time.time())
+    e = hex(int(now)).upper()[2:]#转换为16进制字符串
+    i = hashlib.md5(str(int(now))).hexdigest().upper()
+    if len(e)!=8:
+        zz = {'as': "479BB4B7254C150", 'cp': "7E0AC8874BB0985"}
+        return zz
+    n=i[:5]
+    a=i[-5:]
+    r = ""
+    s = ""
+    for i in range(5):
+        s=s+n[i]+e[i]
+    for j in range(5):
+        r=r+e[j+3]+a[j]
+    zz={'as': "A1" + s + e[-3:],'cp': e[0:3] + r + "E1"}
+    print zz
+    return zz
+def firstpage(num):
+    AS=getas_cp()['as'] 
+    CP=getas_cp()['cp'] 
+    hotURL='http://www.toutiao.com/api/pc/feed/?category=news_hot&utm_source=toutiao&widen=1&max_behot_time='+str(num)+'&max_behot_time_tmp='+str(num)+'&tadrequire=true&as='+AS+'&cp='+CP
+    request = urllib2.Request(hotURL)
+    response = urllib2.urlopen(request)
+    wbdata=response.read()
+    data=json.loads(wbdata)
+    max_behot_time=data['next']['max_behot_time']
+    return max_behot_time
+
+def getNextUrl(num):
+    #print getas_cp()
+    #AS=getas_cp()['as'] 
+    #CP=getas_cp()['cp'] 
+    AS='A185A9DBCB090A0'
+    CP='59BB19A0AAB06E1'
+    #hotURL='http://www.toutiao.com/api/pc/feed/?category=news_hot&utm_source=toutiao&widen=1&max_behot_time='+str(num)+'&max_behot_time_tmp='+str(num)+'&tadrequire=true&as='+AS+'&cp='+CP
+    hotURL='http://www.toutiao.com/api/pc/feed/?category=news_hot&utm_source=toutiao&widen=1&max_behot_time=0&max_behot_time_tmp=0&tadrequire=true&as=A105691B2F1547B&cp=59BFD5B4679BAE1'
+    print 'as:',AS,'cp:',CP
+    cookies='uuid="w:38f542812f6c40909da641f939c6502f"; UM_distinctid=15c62590384484-0d3a66ca831491-5c6a3a7a-1fa400-15c625903859dd; csrftoken=e52d2916e1600c6cc98bcf11af1156d2; __utma=24953151.1184344000.1496298619.1505114811.1505114811.1; __utmz=24953151.1505114811.1.1.utmcsr=(direct)|utmccn=(direct)|utmcmd=(none); sso_login_status=0; _ga=GA1.2.1184344000.1496298619; tt_webid=6426553651305629186; WEATHER_CITY=%E5%8C%97%E4%BA%AC; CNZZDATA1259612802=1034825299-1496293910-https%253A%252F%252Fwww.baidu.com%252F%7C1505708969; __tasessionId=u1wbo46zv1505711104603; tt_webid=6426553651305629186'
+    request = urllib2.Request(hotURL,cookies=cookies)
+    response = urllib2.urlopen(request)
+    wbdata=response.read()
+    data=json.loads(wbdata)
+    items=data['data']
+    max_behot_time=data['next']['max_behot_time']
+    for item in items:
+        if 'title' in item:
+            print item['title'] 
+    #for item in data:
+    return max_behot_time
+     #   print item['next']
+    #max_behot_time=data['max_behot_time']
+next=getNextUrl(0)
