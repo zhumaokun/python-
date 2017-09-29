@@ -1,10 +1,10 @@
 import requests
 import json
-import urllib2
-import re
-import math
 import time
+import math
 import hashlib
+from xlwt import Workbook
+news_set=[]
 def getas_cp():
     zz ={}
     now = round(time.time())
@@ -22,40 +22,94 @@ def getas_cp():
     for j in range(5):
         r=r+e[j+3]+a[j]
     zz={'as': "A1" + s + e[-3:],'cp': e[0:3] + r + "E1"}
-    print zz
     return zz
-def firstpage(num):
-    AS=getas_cp()['as'] 
-    CP=getas_cp()['cp'] 
-    hotURL='http://www.toutiao.com/api/pc/feed/?category=news_hot&utm_source=toutiao&widen=1&max_behot_time='+str(num)+'&max_behot_time_tmp='+str(num)+'&tadrequire=true&as='+AS+'&cp='+CP
-    request = urllib2.Request(hotURL)
-    response = urllib2.urlopen(request)
-    wbdata=response.read()
-    data=json.loads(wbdata)
-    max_behot_time=data['next']['max_behot_time']
-    return max_behot_time
-
-def getNextUrl(num):
-    #print getas_cp()
-    #AS=getas_cp()['as'] 
-    #CP=getas_cp()['cp'] 
-    AS='A185A9DBCB090A0'
-    CP='59BB19A0AAB06E1'
-    #hotURL='http://www.toutiao.com/api/pc/feed/?category=news_hot&utm_source=toutiao&widen=1&max_behot_time='+str(num)+'&max_behot_time_tmp='+str(num)+'&tadrequire=true&as='+AS+'&cp='+CP
-    hotURL='http://www.toutiao.com/api/pc/feed/?category=news_hot&utm_source=toutiao&widen=1&max_behot_time=0&max_behot_time_tmp=0&tadrequire=true&as=A105691B2F1547B&cp=59BFD5B4679BAE1'
-    print 'as:',AS,'cp:',CP
-    cookies='uuid="w:38f542812f6c40909da641f939c6502f"; UM_distinctid=15c62590384484-0d3a66ca831491-5c6a3a7a-1fa400-15c625903859dd; csrftoken=e52d2916e1600c6cc98bcf11af1156d2; __utma=24953151.1184344000.1496298619.1505114811.1505114811.1; __utmz=24953151.1505114811.1.1.utmcsr=(direct)|utmccn=(direct)|utmcmd=(none); sso_login_status=0; _ga=GA1.2.1184344000.1496298619; tt_webid=6426553651305629186; WEATHER_CITY=%E5%8C%97%E4%BA%AC; CNZZDATA1259612802=1034825299-1496293910-https%253A%252F%252Fwww.baidu.com%252F%7C1505708969; __tasessionId=u1wbo46zv1505711104603; tt_webid=6426553651305629186'
-    request = urllib2.Request(hotURL,cookies=cookies)
-    response = urllib2.urlopen(request)
-    wbdata=response.read()
+def get_cookies():
+    f=open(r'D:\cookie.txt','r')#打开所保存的cookies内容文件  
+    cookies={}#初始化cookies字典变量  
+    for line in f.read().split(';'):   #按照字符：进行划分读取  
+        #其设置为1就会把字符串拆分成2份  
+        name,value=line.strip().split('=',1)  
+        cookies[name]=value  #为字典cookies添加内容  
+    return cookies   
+def get_pageinfo(url):
+    global news_set
+    cookies=get_cookies()
+    headers={
+    "Accept":"text/javascript, text/html, application/xml, text/xml, */*",
+    "Accept-Encoding":"gzip, deflate",
+    "Accept-Language":"zh-CN,zh;q=0.8",
+    "Host":"www.toutiao.com",
+    "Referer":"http://www.toutiao.com/ch/news_hot/",
+    "User-Agent":"Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36"
+    }
+    req=requests.get(url,headers=headers,cookies=cookies)
+    wbdata=requests.get(url,headers=headers,cookies=cookies).text
     data=json.loads(wbdata)
     items=data['data']
     max_behot_time=data['next']['max_behot_time']
+    result={'news':[],'max_behot_time':max_behot_time}
     for item in items:
-        if 'title' in item:
-            print item['title'] 
-    #for item in data:
+        news = {'title': None,
+                 'chinese_tag': None,
+                'news_url':None,
+                'media_url':None,
+                'comments_count':None
+                }
+        if item['is_feed_ad']==False:
+            if 'comments_count' in item: 
+                comments_count=item['comments_count']  
+            else:comments_count=0
+            
+            if 'title' in item:
+                title=item['title']
+            else:title=None
+            if 'chinese_tag' in item:
+                 chinese_tag=item['chinese_tag']
+            else:chinese_tag=None
+            if 'media_url' in item:
+                 media_url='http://www.toutiao.com'+item['media_url']
+            else:media_url=None
+            if 'group_id' in item:
+                news_url='http://www.toutiao.com/a'+item['group_id']
+            else:news_url=None
+            #print title,comments_count,news_url
+            news['title']=title
+            news['chinese_tag']=chinese_tag
+            news['news_url']=news_url
+            news['media_url']=media_url
+            news['comments_count']=comments_count
+        #result['news'].append(news)
+        news_set.append(news)
     return max_behot_time
-     #   print item['next']
-    #max_behot_time=data['max_behot_time']
-next=getNextUrl(0)
+def get_url(timestamp):
+    AS=getas_cp()['as']
+    CP=getas_cp()['cp']
+    url='http://www.toutiao.com/api/pc/feed/?category=news_hot&utm_source=toutiao&widen=1&max_behot_time='+str(timestamp)+'&max_behot_time_tmp='+str(timestamp)+'&tadrequire=true&as='+AS+'&cp='+CP
+    return url
+url=get_url(0)
+first_timestamp=get_pageinfo(url)
+def write_excel():
+    #写入表头
+    book = Workbook()
+    sheet= book.add_sheet('toutiao')
+    sheet.write(0, 0, 'title')
+    sheet.write(0, 1, 'chinese_tag')
+    sheet.write(0, 2, 'news_url')
+    sheet.write(0, 3, 'media_url')
+    sheet.write(0, 4, 'comments_count')
+    #写入数据
+    for i in range(len(news_set)):
+        sheet.write(i+1, 0, news_set[i]['title'])
+        sheet.write(i+1, 1, news_set[i]['chinese_tag'])
+        sheet.write(i+1, 2, news_set[i]['news_url'])
+        sheet.write(i+1, 3, news_set[i]['media_url'])
+        sheet.write(i+1, 4, news_set[i]['comments_count']) 
+    book.save('D:\\toutiao.xls')
+
+for i in range(1):
+    print('第%d次：' % i)
+    _url=get_url(first_timestamp)
+    get_pageinfo(_url)
+    first_timestamp=get_pageinfo(_url)
+#num = [a for a in news_set]     
+write_excel()
